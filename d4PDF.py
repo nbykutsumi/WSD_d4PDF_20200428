@@ -8,15 +8,15 @@ from collections import OrderedDict as odict
 
 class snp_6hr_2byte(object):
     def __init__(self, cfg, vtype=None):
-        self.baseDir = cfg['baseDir']
+        self.baseDir = cfg['databaseDir']
         self.vtype   = vtype
         self.nvar    = {'sfc':7, 'atm':14}[vtype]
         self.miss_in = -32768
         self.miss_out= -9999.
         self.ny      = 320
         self.nx      = 640
-        self.lon     = lon()
-        self.lat     = lat()
+        self.Lon     = Lon()
+        self.Lat     = Lat()
 
         self.fmtsize = self.nvar*self.ny*self.nx*2 # bytes
 
@@ -51,10 +51,10 @@ class snp_6hr_2byte(object):
         self.coefs   = zip(*dictvars.items())
         self.dictvars= dictvars
 
-    def load_6hr(self, vname,expr,ens,DTime):
+    def load_6hr(self, vname,scen,ens,DTime):
         Year,Mon = DTime.timetuple()[:2]
         srcDir  = self.baseDir + '/%02d%02d'%(Year,Mon)
-        srcPath = srcDir + '/%s_snp_6hr_2byte_%s_m%03d_%04d%02d.dr'%(self.vtype,expr,ens,Year,Mon)
+        srcPath = srcDir + '/%s_snp_6hr_2byte_%s_m%03d_%04d%02d.dr'%(self.vtype,scen, ens,Year,Mon)
 
         ny,nx,nvar = self.ny, self.nx, self.nvar
         nsteps     = os.stat( srcPath ).st_size / (ny*nx*nvar*2) # num of timesteps
@@ -65,10 +65,26 @@ class snp_6hr_2byte(object):
         a,b    = self.coefs[vidx]
         istep  = int((DTime - datetime(Year,Mon,1,0)).total_seconds() \
                                                 /(3600*6))
-        size   = ny*nx*2  # bytes
-        seek   = vidx*size
         data   = ma.masked_equal(np.array( mmap[istep, vidx, :, :] ).byteswap(), self.miss_in)*a + b
         return data
+
+    def load_ave_mon(self, vname, scen, ens, Year, Mon):
+        srcDir  = self.baseDir + '/%02d%02d'%(Year,Mon)
+        srcPath = srcDir + '/%s_snp_6hr_2byte_%s_m%03d_%04d%02d.dr'%(self.vtype,scen, ens,Year,Mon)
+
+        ny,nx,nvar = self.ny, self.nx, self.nvar
+        nsteps     = os.stat( srcPath ).st_size / (ny*nx*nvar*2) # num of timesteps
+        mmap   = np.memmap( srcPath, dtype='int16', mode='r'
+                           ,shape=(nsteps, nvar, ny, nx))
+
+        vidx   = self.vars.index(vname)
+        a,b    = self.coefs[vidx]
+        data   = ma.masked_equal(np.array( mmap[:, vidx, :, :] ).byteswap(), self.miss_in).mean(axis=0)*a + b
+        return data
+
+
+
+
 
     def load_topo(self, vname='height'):
         return load_topo_TL319(baseDir=self.baseDir, vname=vname)
@@ -82,13 +98,13 @@ def load_topo_TL319(baseDir=None, vname='height'):
     data    = ma.masked_equal(np.fromfile(srcPath, 'float32').byteswap().reshape(2,ny,nx)[vidx], miss)
     return data
 
-def dlon():
+def dLon():
     return 0.5625
 
-def lon():
+def Lon():
     return np.arange(0,0.5625*639+0.001,0.5625)
 
-def lat():
+def Lat():
     a1lat = np.array([
       -89.570,  -89.013,  -88.453,  -87.892,  -87.331,
       -86.769,  -86.208,  -85.647,  -85.085,  -84.523,

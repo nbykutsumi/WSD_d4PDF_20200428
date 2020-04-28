@@ -2,8 +2,9 @@ from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
 import util
-import config_func
+import config
 import IO_Master
+import ConstCyclone
 import Cyclone
 import calendar
 import os, sys, shutil
@@ -23,14 +24,15 @@ import os, sys, shutil
 
 prj     = "d4PDF"
 model   = "__"
-run     = "NAT"
+run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
 
-iDTime = datetime(2006,1,1,6)
-eDTime = datetime(2015,1,1,0)
-
+#iDTime = datetime(2006,1,1,6)
+#eDTime = datetime(2015,1,1,0)
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
@@ -39,9 +41,9 @@ if len(largv)>1:
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
   iYear,iMon, eYear, eMon = map(int,largv[6:])
-eDay   = calendar.monthrange(eYear,eMon)[1]
-iDTime = datetime(iYear,iMon,1,6)
-eDTime = datetime(eYear,eMon,eDay,18)
+  eDay   = calendar.monthrange(eYear,eMon)[1]
+  iDTime = datetime(iYear,iMon,1,6)
+  eDTime = datetime(eYear,eMon,eDay,18)
 #-------------------------
 
 
@@ -55,9 +57,16 @@ lDTime   = ret_lDTime(iDTime, eDTime, dDTime)
 
 tstp        = "6hr"
 
-cfg    = config_func.config_func(prj, model, run)
-iom    = IO_Master.IO_Master(prj, model, run, res)
-cy     = Cyclone.Cyclone(cfg)
+cfg          = config.cfg
+cfg['prj']   = prj    # for ConstCyclone
+cfg['model'] = model  # for ConstCyclone
+cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+
+const  = ConstCyclone.Const(cfg)
+const['Lat'] = iom.Lat
+const['Lon'] = iom.Lon
+cy     = Cyclone.Cyclone(cfg, const)
 
 a1lat  = iom.Lat
 a1lon  = iom.Lon

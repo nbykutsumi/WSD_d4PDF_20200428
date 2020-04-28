@@ -1,11 +1,13 @@
 from numpy import *
 from   datetime import datetime, timedelta
 import util
+import config
 import os, sys
 import calendar
-import config_func
 import IO_Master
+import ConstCyclone
 import Cyclone
+import numpy as np
 #******************************************************
 #******************************************************
 #prj     = "JRA55"
@@ -15,16 +17,26 @@ import Cyclone
 #tstp    = "6hr"
 #noleap  = False
 
-prj     = "HAPPI"
-model   = "MIROC5"
-#run     = "C20-ALL-001"
-run     = "XXXX"
-res     = "128x256"
-tstp    = "day"
-noleap  = True
+#prj     = "HAPPI"
+#model   = "MIROC5"
+##run     = "C20-ALL-001"
+#run     = "XXXX"
+#res     = "128x256"
+#tstp    = "day"
+#noleap  = True
 
-iDTime = datetime(2006,1,1,6)  # HAPPI
-eDTime = datetime(2016,1,1,0)  # HAPPI
+prj     = "d4PDF"
+model   = "__"
+run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+res     = "320x640"
+tstp    = '6hr'
+noleap  = False
+
+iDTime = datetime(2010,1,1,0)
+eDTime = datetime(2010,1,5,0)
+
+#iDTime = datetime(2006,1,1,6)  # HAPPI
+#eDTime = datetime(2016,1,1,0)  # HAPPI
 
 #-- argv ----------------
 largv = sys.argv
@@ -36,9 +48,9 @@ if len(largv)>1:
 
   iYear,iMon, eYear, eMon = map(int,largv[7:])
 
-eDay1 = calendar.monthrange(eYear,eMon)[1]
-iDTime = datetime(iYear,iMon,1,0)
-eDTime = datetime(eYear,eMon,eDay1,18)
+  eDay1 = calendar.monthrange(eYear,eMon)[1]
+  iDTime = datetime(iYear,iMon,1,0)
+  eDTime = datetime(eYear,eMon,eDay1,18)
 #-------------------------
 
 print "*"*50
@@ -67,9 +79,18 @@ miss   = -9999.
 dnx    = {}
 dny    = {}
 #****************************************************
-cfg    = config_func.config_func(prj, model, run)
-iom    = IO_Master.IO_Master(prj, model, run, res)
-cy     = Cyclone.Cyclone(cfg)
+cfg    = config.cfg
+cfg['prj']   = prj    # for ConstCyclone
+cfg['model'] = model  # for ConstCyclone
+cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+
+iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+
+const  = ConstCyclone.Const(cfg)
+const['Lat'] = iom.Lat
+const['Lon'] = iom.Lon
+
+cy     = Cyclone.Cyclone(cfg, const)
 nx     = iom.nx
 ny     = iom.ny
 
@@ -112,7 +133,7 @@ def date_slide(year,mon,day, daydelta, noleap):
 #******************************************************
 for var in lvar:
   #------
-  odir_root = os.path.join(cfg["baseDir"],"run.mean",var)
+  odir_root = os.path.join(cfg["outbaseDir"],"run.mean",var)
   #------------------------------
   # make heads and tails
   #------------------------------
@@ -130,11 +151,11 @@ for var in lvar:
     #*********************
     # start running mean
     #*********************
-    # dummy
+    # container
     #********
-    aout  = zeros([ny,nx], float32)
-    ntimes = 0
+    a3out  = zeros([len(ldaydelta)*len(lhour),ny,nx], float32)
     #********
+    i=-1
     for daydelta in ldaydelta:
       target     = date_slide( year, mon, day, daydelta, noleap)
       targetyear = target.year
@@ -142,22 +163,21 @@ for var in lvar:
       targetday  = target.day
       #-------------------
       for targethour in lhour:
+        i = i+1
         tDTime = datetime(targetyear, targetmon, targetday, targethour)
-        ntimes = ntimes + 1
         try:
           #ain    = iom.Load_6hrPlev(var, tDTime, plev)
-          ain    = Load_Var(var, tDTime, plev)
-        except IOError:
-          print "no file", var, tDTime, plev
-          ntimes = ntimes - 1
-          continue
+          ain  = Load_Var(var, tDTime, plev)
+        #except IOError:
+        except:
+          ain  = np.ones([ny,nx],'float32')*miss
         #--------------------
         # add 
         #--------------------
-        aout  = aout + ain
+        a3out[i] = ain
     #*****************
-    aout    = aout / ntimes
-
+    aout = ma.masked_equal(a3out, miss).mean(axis=0).astype('float32')
+    print aout.shape
     if ma.isMA(aout):
       aout = aout.filled(miss)
     #*****************
