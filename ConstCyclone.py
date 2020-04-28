@@ -45,6 +45,12 @@ def Const(cfg):
       cst['tcrvort'] = 3.7*1.0e-5 *1.3 *1.3# s-1  lower 5%
       cst['thwcore'] = 0.2        # K  lower 5% (approx.)
 
+      #cst['thpgrad'] = 0      # Pa/1000km lower 5% of ExC
+      #cst['exrvort'] = 0     # s-1  lower 5%
+      #cst['tcrvort'] = 0     # s-1  lower 5%
+      #cst['thwcore'] = -10        # K  lower 5% (approx.)
+
+
 
 
     return cst

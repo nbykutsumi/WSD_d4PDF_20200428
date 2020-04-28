@@ -1,3 +1,4 @@
+# %%
 from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
@@ -315,3 +316,6 @@ for idt, DTime1 in enumerate(lDTimeRev):
 
   print duraname1
 
+
+
+# %%

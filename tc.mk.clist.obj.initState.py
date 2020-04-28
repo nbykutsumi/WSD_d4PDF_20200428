@@ -71,6 +71,8 @@ def ret_a1initState(var, year,mon,dinitState_pre):
   a1land      = cy.load_clist("land" ,year,mon) 
 
   #------------------------
+  print len(a1idate), len(a1ipos), len(a1time), len(a1state), len(a1land)
+
   n  = len(a1idate)
   ldat    = deque([])
   for i in range(n):

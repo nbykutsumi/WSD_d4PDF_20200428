@@ -29,7 +29,7 @@ res     = "320x640"
 noleap  = False
 
 iDTime = datetime(2010,1,1,0)
-eDTime = datetime(2010,1,5,0)
+eDTime = datetime(2010,1,31,18)
 
 #iDTime = datetime(2006,1,1,6)
 #eDTime = datetime(2015,1,1,0)
@@ -42,7 +42,8 @@ if len(largv)>1:
   else: print "check noleap",noleap; sys.exit()
   iYear,iMon, eYear, eMon = map(int,largv[6:])
   eDay   = calendar.monthrange(eYear,eMon)[1]
-  iDTime = datetime(iYear,iMon,1,6)
+  #iDTime = datetime(iYear,iMon,1,6)
+  iDTime = datetime(iYear,iMon,1,0)
   eDTime = datetime(eYear,eMon,eDay,18)
 #-------------------------
 
@@ -168,3 +169,6 @@ for DTime in lDTime:
   a2maxvort  = ma.masked_where(a2pgrad==miss, a2maxvort).filled(miss)
 
   a2maxvort.tofile(rvortname)
+
+
+# %%

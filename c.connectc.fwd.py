@@ -1,3 +1,4 @@
+# %%
 from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
@@ -306,3 +307,6 @@ for idt, DTime in enumerate(lDTime):
   a2age1.tofile(agename1)
   
 
+
+
+# %%

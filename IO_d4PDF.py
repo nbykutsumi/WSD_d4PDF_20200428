@@ -68,7 +68,7 @@ class IO_d4pdf(snp_6hr_2byte):
 
     def Load_const(self, var):
         if var=='topo':
-            data = self.dbatm.load_topo(vname='height')
+            data = self.dbatm.load_topo(vname='height').filled(self.miss)
         elif var=='land':
             data = self.dbatm.load_topo(vname='ratiol')
         else:

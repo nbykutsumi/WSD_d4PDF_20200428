@@ -47,7 +47,7 @@ if len(largv)>1:
   else: print "check noleap",noleap; sys.exit()
 
   iYear,iMon, eYear, eMon = map(int,largv[6:])
-  iDTime = datetime(iYear,iMon,1,6)
+  iDTime = datetime(iYear,iMon,1,0)   # 2020/04/28
   eDTime = datetime(eYear,eMon,31,18)
 #-------------------------
 

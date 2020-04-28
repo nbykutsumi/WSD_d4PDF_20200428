@@ -1,3 +1,4 @@
+# %%
 from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
