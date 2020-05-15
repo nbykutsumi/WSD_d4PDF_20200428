@@ -1,4 +1,6 @@
-def Const(cfg):
+import sys
+
+def Const(prj=None,model=None):
 
     cst = {}  # constants
     cst['thtopo']    = 1500 # m
@@ -6,7 +8,7 @@ def Const(cfg):
     #cst['thsst']     = 273.15  + 25.0  # K
     cst['thsst']     = 273.15  + 27.0  # K
 
-    if cfg["prj"]=="JRA55":
+    if prj=="JRA55":
       # "JRA55","145x288
       cst['thpgrad'] = 325.0      # Pa/1000km lower 5% of ExC
       cst['exrvort'] = 3.7*1.0e-5 # s-1  lower 5%  --> Default
@@ -15,7 +17,7 @@ def Const(cfg):
       #cst['thwcore'] = 0.0        # K
       cst['thwcore'] = 0.2        # K  lower 5% (approx.)
 
-    elif (cfg["prj"]=="HAPPI")&(cfg["model"]=="MIROC5"):
+    elif (prj=="HAPPI")&(model=="MIROC5"):
       # "HAPPI","128x256"
 
       ## For Tuning
@@ -39,7 +41,9 @@ def Const(cfg):
       #print "tcrvort",self.tcrvort
       #print "thwcore",self.thwcore 
 
-    elif (cfg["prj"]=="d4PDF"):
+    elif (prj=="d4PDF"):
+      cst['thpgrad_min'] = 300  # Pa/1000km , for connect.fwd
+      cst['rvort_min'] = 3*1.0e-5  # s-1, for connect.fwd
       cst['thpgrad'] = 325.0      # Pa/1000km lower 5% of ExC
       cst['exrvort'] = 3.7*1.0e-5 *1.3     # s-1  lower 5%
       cst['tcrvort'] = 3.7*1.0e-5 *1.3 *1.3# s-1  lower 5%
@@ -50,7 +54,9 @@ def Const(cfg):
       #cst['tcrvort'] = 0     # s-1  lower 5%
       #cst['thwcore'] = -10        # K  lower 5% (approx.)
 
-
+    else:
+        print 'check prj',prj
+        sys.exit()
 
 
     return cst

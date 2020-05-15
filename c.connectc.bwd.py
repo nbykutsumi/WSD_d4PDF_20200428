@@ -24,7 +24,8 @@ import os, sys
 
 prj     = "d4PDF"
 model   = "__"
-run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+#run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 
@@ -36,12 +37,13 @@ eDTime = datetime(2010,1,5,0)
 
 #flgresume  = True
 flgresume  = False
-
+dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
-  prj, model, run, res, noleap, flagresume = largv[1:1+6]
+  prj, model, run, res, noleap, flagresume, dbbaseDir, wsbaseDir = largv[1:1+8]
   if noleap=="True": noleap=True
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
@@ -50,7 +52,7 @@ if len(largv)>1:
   elif flagresume=="False": flagresume=False
   else: print "check flagresume",flagresume; sys.exit()
 
-  iYear,iMon, eYear, eMon = map(int,largv[7:])
+  iYear,iMon, eYear, eMon = map(int,largv[1+8:])
 
   eDay   = calendar.monthrange(eYear,eMon)[1]
   #iDTime = datetime(iYear,iMon,1,6)
@@ -68,16 +70,18 @@ ret_lDTime = {False: util.ret_lDTime
 lDTime   = ret_lDTime(iDTime, eDTime, dDTime)
 lDTimeRev= lDTime[::-1]
 
-cfg          = config.cfg
-cfg['prj']   = prj    # for ConstCyclone
-cfg['model'] = model  # for ConstCyclone
-cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
-iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+#cfg          = config.cfg
+#cfg['prj']   = prj    # for ConstCyclone
+#cfg['model'] = model  # for ConstCyclone
+#cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+#iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+iom    = IO_Master.IO_Master(prj, model, run, res, dbbaseDir)
 
-const  = ConstCyclone.Const(cfg)
+const  = ConstCyclone.Const(prj=prj, model=model)
 const['Lat'] = iom.Lat
 const['Lon'] = iom.Lon
-cy     = Cyclone.Cyclone(cfg, const)
+wsDir = wsbaseDir + '/%s'%(run)
+cy     = Cyclone.Cyclone(baseDir=wsDir, const=const)
 
 #****************
 miss_dbl     = -9999.0

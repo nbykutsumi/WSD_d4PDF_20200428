@@ -4,11 +4,15 @@ import struct
 from numpy import ma
 from datetime import datetime, timedelta
 from collections import OrderedDict as odict
-
+import pygrib
 
 class snp_6hr_2byte(object):
-    def __init__(self, cfg, vtype=None):
-        self.baseDir = cfg['databaseDir']
+    def __init__(self, vtype=None, dbbaseDir=None):
+        if dbbaseDir is None:
+            self.dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+        else:
+            self.dbbaseDir = dbbaseDir
+
         self.vtype   = vtype
         self.nvar    = {'sfc':7, 'atm':14}[vtype]
         self.miss_in = -32768
@@ -51,9 +55,9 @@ class snp_6hr_2byte(object):
         self.coefs   = zip(*dictvars.items())
         self.dictvars= dictvars
 
-    def load_6hr(self, vname,scen,ens,DTime):
+    def load_6hr(self, vname,scen,ens,DTime, miss_fill=None):
         Year,Mon = DTime.timetuple()[:2]
-        srcDir  = self.baseDir + '/%02d%02d'%(Year,Mon)
+        srcDir  = self.dbbaseDir + '/%s/m%03d/%02d%02d'%(scen, ens, Year,Mon)
         srcPath = srcDir + '/%s_snp_6hr_2byte_%s_m%03d_%04d%02d.dr'%(self.vtype,scen, ens,Year,Mon)
 
         ny,nx,nvar = self.ny, self.nx, self.nvar
@@ -66,10 +70,13 @@ class snp_6hr_2byte(object):
         istep  = int((DTime - datetime(Year,Mon,1,0)).total_seconds() \
                                                 /(3600*6))
         data   = ma.masked_equal(np.array( mmap[istep, vidx, :, :] ).byteswap(), self.miss_in)*a + b
-        return data
+        if miss_fill is not None:
+            data = data.filled(miss_fill)
 
-    def load_ave_mon(self, vname, scen, ens, Year, Mon):
-        srcDir  = self.baseDir + '/%02d%02d'%(Year,Mon)
+        return data.astype('float32')
+
+    def load_ave_mon(self, vname, scen, ens, Year, Mon, miss_fill=None):
+        srcDir  = self.dbbaseDir + '/%s/m%03d/%02d%02d'%(scen, ens, Year,Mon)
         srcPath = srcDir + '/%s_snp_6hr_2byte_%s_m%03d_%04d%02d.dr'%(self.vtype,scen, ens,Year,Mon)
 
         ny,nx,nvar = self.ny, self.nx, self.nvar
@@ -80,22 +87,128 @@ class snp_6hr_2byte(object):
         vidx   = self.vars.index(vname)
         a,b    = self.coefs[vidx]
         data   = ma.masked_equal(np.array( mmap[:, vidx, :, :] ).byteswap(), self.miss_in).mean(axis=0)*a + b
-        return data
+        if miss_fill is not None:
+            data = data.filled(miss_fill)
+
+
+        return data.astype('float32')
 
 
 
 
 
-    def load_topo(self, vname='height'):
-        return load_topo_TL319(baseDir=self.baseDir, vname=vname)
+    def load_topo(self, vname='height', miss_fill=None):
+        return load_topo_TL319(dbbaseDir=self.dbbaseDir, vname=vname, miss_fill=miss_fill)
 
 
-def load_topo_TL319(baseDir=None, vname='height'):
+class avr_mon_320x640(object):
+    def __init__(self, vtype=None, dbbaseDir=None):
+        if dbbaseDir is None:
+            self.dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+        else:
+            self.dbbaseDir = dbbaseDir
+
+        self.vtype   = vtype
+        self.nvar    = {'sfc':59}[vtype]
+        self.miss_in = -9.99e33
+        self.miss_out= -9999.
+        self.ny      = 320
+        self.nx      = 640
+        self.Lon     = Lon()
+        self.Lat     = Lat()
+
+        if vtype == 'sfc':
+            dictvars = odict([
+('TA'         ,[255, 1   ]),  #  Surface Air Temperature at 2m                            K                1
+('TGEF'       ,[254, 1   ]),  #  Effective Ground temperature (Radiation)                 K                1
+('SLP'        ,[253, 1   ]),  #  SEA LEVEL PRESSSURE                                      Pa               1
+('PS'         ,[252, 1   ]),  #  SURFACE  PRESSURE                                        Pa               1
+('UA'         ,[251, 1   ]),  #  Surface Zonal Velocity at 10m                            m/s              1
+('VA'         ,[250, 1   ]),  #  Surface Merid. Velocity at 10m                           m/s              1
+('WIND'       ,[249, 1   ]),  #  Surface Air Wind Speed at 10m                            m/s              1
+('RHA'        ,[248, 1   ]),  #  Surface Air Relative Humidity at 2m                      %                1
+('QA'         ,[247, 1   ]),  #  Surface Air Specific Humidity at 2m                      kg/kg            1
+('PRECIPI'    ,[246, 1   ]),  #  Total Precipitation                                      kg/m**2/s        1
+('SNP'        ,[245, 1   ]),  #  Snow Precipitation                                       kg/m**2/s        1
+('PPCI'       ,[244, 1   ]),  #  Convective precipitation                                 kg/m**2/s        1
+('EVSPS'      ,[243, 1   ]),  #  water vapor flux                                         kg/m**2/s        1
+('UMOM'       ,[242, 1   ]),  #  momentum flux (X)                                        N/m**2           1
+('VMOM'       ,[241, 1   ]),  #  momentum flux (Y)                                        N/m**2           1
+('FLLH'       ,[240, 1   ]),  #  latent heat flux                                         W/m**2           1
+('FLSH'       ,[239, 1   ]),  #  sensible heat flux                                       W/m**2           1
+('DLWB'       ,[238, 1   ]),  #  Downard Longwave Radiation at the Bot                    W/m**2           1
+('ULWB'       ,[237, 1   ]),  #  Upward Longwave Radiation at the Bot                     W/m**2           1
+('DSWB'       ,[236, 1   ]),  #  Downward Shortwave Radiation at the Bot                  W/m**2           1
+('USWB'       ,[235, 1   ]),  #  Upward Shortwave Radiation at the Bot                    W/m**2           1
+('CSDSWB'     ,[234, 1   ]),  #  Downward Shortwave Radiation at the Bot (Clear Sky)      W/m**2           1
+('CSUSWB'     ,[233, 1   ]),  #  Upward Shortwave Radiation at the Bot (Clear Sky)        W/m**2           1
+('CSDLWB'     ,[232, 1   ]),  #  Downard Longwave Radiation at the Bot (Clear Sky)        W/m**2           1
+('DSWT'       ,[231, 1   ]),  #  Downward Shortwave Radiation at the Top                  W/m**2           1
+('USWT'       ,[230, 1   ]),  #  Upward Shortwave Radiation at the Top                    W/m**2           1
+('ULWT'       ,[229, 1   ]),  #  OLR (Upward Longwave Radiation at the Top)               W/m**2           1
+('CSULWT'     ,[228, 1   ]),  #  OLR clear sky (Upward Longwave Radiation at the Top)     W/m**2           1
+('CSUSWT'     ,[227, 1   ]),  #  Upward Shortwave Radiation at the Top (Clear Sky)        W/m**2           1
+('PWATER'     ,[226, 1   ]),  #  Precipitable Water                                       kg/m**2          1
+('TCLOUD'     ,[225, 1   ]),  #  Total cloud amount                                       %                1
+('TCWC'       ,[224, 1   ]),  #  Total cloud water content                                kg/m**2          1
+('WSL010'     ,[223, 1   ]),  #  H2O SOIL upper 10cm                                      kg/m**2          0
+('H2OSLT'     ,[222, 1   ]),  #  H2O SOIL (total)                                         kg/m**2          0
+('ROFS'       ,[221, 1   ]),  #  surface runoff                                           kg/m**2/s        1
+('ROF'        ,[220, 1   ]),  #  Total Runoff                                             kg/m**2/s        1
+('EVDWVEG'    ,[219, 1   ]),  #  evap/dew on leaf (downward)                              kg/m**2/s        1
+('EVDWSL'     ,[218, 1   ]),  #  evap/dew on soil (downward)                              kg/m**2/s        1
+('TRNSL'      ,[217, 1   ]),  #  transpiration from soil (downward)                       kg/m**2/s        1
+('H2OSL1'     ,[216, 1   ]),  #  H2O SOIL L1                                              kg/m**2          0
+('H2OSL2'     ,[215, 1   ]),  #  H2O SOIL L2                                              kg/m**2          0
+('H2OSL3'     ,[214, 1   ]),  #  H2O SOIL L3                                              kg/m**2          0
+('TMPSL1'     ,[213, 1   ]),  #  TMP SOIL L1                                              K                0
+('TMPSL2'     ,[212, 1   ]),  #  TMP SOIL L2                                              K                0
+('TMPSL3'     ,[211, 1   ]),  #  TMP SOIL L3                                              K                0
+('TMPSL4'     ,[210, 1   ]),  #  TMP SOIL L4                                              K                0
+('CVRSNWA'    ,[209, 1   ]),  #  Snow Coverage                                            0-1              0
+('SWE'        ,[208, 1   ]),  #  Snow water equivalent                                    kg/m**2          1
+('DEPSNW'     ,[207, 1   ]),  #  Snow Depth * CVRSNWA                                     M                0
+('TMPSNW'     ,[206, 1   ]),  #  TMP SNOW (vertical ave)* CVRSNWA                         K                0
+('EVDWSN'     ,[205, 1   ]),  #  evap/dew on snow (downward)                              kg/m**2/s        1
+('SN2SL'      ,[204, 1   ]),  #  snow melt water from snow to soil (downward)             kg/m**2/s        1
+('AICE'       ,[203, 1   ]),  #  Area fraction of sea ice                                 %                1
+('YICE'       ,[202, 1   ]),  #  Mass of Sea Ice                                          kg/m**2          1
+('YSNW'       ,[201, 1   ]),  #  Mass of snow on sea ice                                  kg/m**2          1
+('VINTQU'     ,[200, 1   ]),  #  column total of QU                                       kg/kg m/s Pa     1
+('VINTQV'     ,[199, 1   ]),  #  column total of QV                                       kg/kg m/s Pa     1
+('TOTALHP'    ,[198, 1   ]),  #  Total heating due to physics processes                   W/m**2           1
+('TOTALHM'    ,[197, 1   ]),  #  Total Heating due to moist process                       J/m**2           1
+            ])
+
+        self.vars, \
+        self.coefs   = zip(*dictvars.items())
+        self.dictvars= dictvars
+
+    def load_ave_mon(self, vname,scen,ens, Year, Mon, miss_fill=None):
+        srcDir  = self.dbbaseDir + '/%s/m%03d/%02d%02d'%(scen, ens, Year,Mon)
+        srcpath = srcDir + '/%s_avr_mon_%s_m%03d_%04d%02d.grib'%(self.vtype, scen, ens, Year, Mon)
+        grbs = pygrib.open(srcpath)
+        grbs.seek(0)
+        indicator, coef = self.dictvars[vname]
+        data = grbs.select(indicatorOfParameter=indicator)[0].values
+        data = ma.masked_equal(data, self.miss_in) * coef
+
+        if miss_fill is not None:
+            data = data.filled(miss_fill)
+
+        return data.astype('float32')
+
+
+def load_topo_TL319(dbbaseDir=None, vname='height', miss_fill=None):
     ny,nx   = 320, 640
     miss    = -9.99e+33  
     vidx    = {'height':0, 'ratiol':1}[vname]
-    srcPath = baseDir + '/fixed/TopogRatiol_gsmuv_TL319.gd'
+    srcPath = dbbaseDir + '/fixed/TopogRatiol_gsmuv_TL319.gd'
     data    = ma.masked_equal(np.fromfile(srcPath, 'float32').byteswap().reshape(2,ny,nx)[vidx], miss)
+    if miss_fill is not None:
+        data = data.filled(miss_fill)
+
+
     return data
 
 def dLon():

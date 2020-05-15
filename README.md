@@ -6,6 +6,7 @@ d4PDF (Global) version.
 
 ## Requirement
 - python2.7
+- f2py
 - gfortran
 - numpy
 - matplotlib (for visualization)
@@ -30,6 +31,7 @@ run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 tstp_runmean = "6hr"
+logDir = "/home/utsumi/log"
 
 iYear, iMon = [2010,1] # Start of the detection period
 eYear, eMon = [2010,1] # End of the detection period

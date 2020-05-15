@@ -2,7 +2,7 @@ from numpy import *
 from detect_fsub import *
 from datetime import datetime, timedelta
 import util
-import config
+#import config
 import IO_Master
 import ConstCyclone
 import Cyclone
@@ -24,9 +24,12 @@ import os, sys, shutil
 
 prj     = "d4PDF"
 model   = "__"
-run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+#run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
+dbbaseDir  = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+wsbaseDir= '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
 iDTime = datetime(2010,1,1,0)
 eDTime = datetime(2010,1,31,18)
@@ -36,11 +39,11 @@ eDTime = datetime(2010,1,31,18)
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
-  prj, model, run, res, noleap = largv[1:1+5]
+  prj, model, run, res, noleap, dbbaseDir, wsbaseDir = largv[1:1+7]
   if noleap=="True": noleap=True
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
-  iYear,iMon, eYear, eMon = map(int,largv[6:])
+  iYear,iMon, eYear, eMon = map(int,largv[1+7:])
   eDay   = calendar.monthrange(eYear,eMon)[1]
   #iDTime = datetime(iYear,iMon,1,6)
   iDTime = datetime(iYear,iMon,1,0)
@@ -58,16 +61,18 @@ lDTime   = ret_lDTime(iDTime, eDTime, dDTime)
 
 tstp        = "6hr"
 
-cfg          = config.cfg
-cfg['prj']   = prj    # for ConstCyclone
-cfg['model'] = model  # for ConstCyclone
-cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
-iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+#cfg          = config.cfg
+#cfg['prj']   = prj    # for ConstCyclone
+#cfg['model'] = model  # for ConstCyclone
+#cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+#iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+wsDir = wsbaseDir + '/%s'%(run)
+iom    = IO_Master.IO_Master(prj, model, run, res, dbbaseDir)
 
-const  = ConstCyclone.Const(cfg)
+const  = ConstCyclone.Const(prj=prj, model=model)
 const['Lat'] = iom.Lat
 const['Lon'] = iom.Lon
-cy     = Cyclone.Cyclone(cfg, const)
+cy     = Cyclone.Cyclone(baseDir=wsDir, const=const)
 
 a1lat  = iom.Lat
 a1lon  = iom.Lon
@@ -144,7 +149,10 @@ for DTime in lDTime:
   a2v       = iom.Load_6hrPlev("va", DTime, 850)
   a2rvort   = detect_fsub.mk_a2rvort(a2u.T, a2v.T, a1lon, a1lat, iom.miss).T
 
-  a2rvort[:ny/2] = -a2rvort[:ny/2]
+  a2mask    = ma.masked_equal(a2rvort, iom.miss).mask
+  a2rvort[:ny/2] = -a2rvort[:ny/2]  # The signs of the missing values in the south hemisphere are also fliped
+  a2rvort   = ma.masked_where(a2mask, a2rvort).filled(iom.miss)
+
 
   a2large   = empty([ny+2,nx+2],float32)
   a3rvort   = empty([9,ny,nx],float32)

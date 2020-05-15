@@ -26,9 +26,14 @@ import ConstCyclone
 
 prj     = "d4PDF"
 model   = "__"
-run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+#run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
+dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
+
+
 
 iYear_data = 2010
 iMon_data  = 1
@@ -38,24 +43,27 @@ eYear, eMon = [2010,1]
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
-  prj, model, run, res, noleap = largv[1:1+5]
+  prj, model, run, res, noleap, dbbaseDir, wsbaseDir = largv[1:1+7]
   if noleap=="True": noleap=True
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
 
-  iYear,iMon, eYear, eMon = map(int,largv[6:6+4])
-  iYear_data, iMon_data   = map(int,largv[10:10+2])
+  iYear,iMon, eYear, eMon = map(int,largv[1+7:1+7+4])
+  iYear_data, iMon_data   = map(int,largv[1+7+4:1+7+4+2])
 #-------------------------
-cfg          = config.cfg
-cfg['prj']   = prj    # for ConstCyclone
-cfg['model'] = model  # for ConstCyclone
-cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
-iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+#cfg          = config.cfg
+#cfg['prj']   = prj    # for ConstCyclone
+#cfg['model'] = model  # for ConstCyclone
+#cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+#iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+iom    = IO_Master.IO_Master(prj, model, run, res, dbbaseDir)
 
-const  = ConstCyclone.Const(cfg)
+const  = ConstCyclone.Const(prj=prj, model=model)
 const['Lat'] = iom.Lat
 const['Lon'] = iom.Lon
-cy     = Cyclone.Cyclone(cfg, const)
+
+wsDir = wsbaseDir + '/%s'%(run)
+cy     = Cyclone.Cyclone(baseDir=wsDir, const=const)
 lYM = util.ret_lYM([iYear,iMon],[eYear,eMon])
 
 #**********************************************
@@ -109,7 +117,7 @@ if (iYear == iYear_data)&(iMon ==iMon_data):
   dinitland  = {} 
 else:
   dinitsst , a1temp = ret_a1initState("sst" , year_pre, mon_pre, {} )
-  dinitland, a1temp = ret_a1initstate("land", year_pre, mon_pre, {} )
+  dinitland, a1temp = ret_a1initState("land", year_pre, mon_pre, {} )
 #-------------
 for [year, mon] in lYM:
   dinitsst_pre          = dinitsst

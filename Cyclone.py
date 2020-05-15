@@ -69,8 +69,8 @@ def expand8grids(lxy, ny, nx):
   
 #---------------------------------------------------
 class Cyclone():
-  def __init__(self, cfg, const):
-    self.baseDir = cfg["outbaseDir"]
+  def __init__(self, baseDir, const):
+    self.baseDir = baseDir
     basebaseDir  = "/".join(self.baseDir.split("/")[:-1])
     print basebaseDir
 
@@ -418,6 +418,7 @@ class Cyclone():
     
         #---- thwcore ----
         if dtup + dtmid + dtlow < thwcore:
+        #if (dtup <thwcore)or(dtmid<thwcore)or(dtmid<thwcore):
           #print "thwcore",dtup+dtmid+dtlow,"<",thwcore
           try:
             dictExC[DTime].append(oList)
@@ -427,14 +428,14 @@ class Cyclone():
           continue
 
         #---- wup & wlow --
-        if wup > wlow:
-          try:
-            dictExC[DTime].append(oList)
-          except KeyError:
-            dictExC[DTime] = [oList]
+        #if wup > wlow:
+        #  try:
+        #    dictExC[DTime].append(oList)
+        #  except KeyError:
+        #    dictExC[DTime] = [oList]
 
-          #print "wup > wlow !!"
-          continue 
+        #  #print "wup > wlow !!"
+        #  continue 
  
         #---- initsst ----
         if initsst < thinitsst:

@@ -1,3 +1,4 @@
+# %%
 from numpy import *
 from   datetime import datetime, timedelta
 import util
@@ -27,26 +28,28 @@ import numpy as np
 
 prj     = "d4PDF"
 model   = "__"
-run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+#run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+run     = "XX-HPB-001"   # {expr}-{scen}-{ens}
 res     = "320x640"
 tstp    = '6hr'
 noleap  = False
+dbbaseDir  = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+wsbaseDir= '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-iDTime = datetime(2010,1,1,0)
-eDTime = datetime(2010,1,5,0)
-
+iDTime = datetime(2010,1,1)
+eDTime = datetime(2010,1,15)
 #iDTime = datetime(2006,1,1,6)  # HAPPI
 #eDTime = datetime(2016,1,1,0)  # HAPPI
 
 #-- argv ----------------
 largv = sys.argv
 if len(largv)>1:
-  prj, model, run, res, tstp, noleap = largv[1:1+6]
+  prj, model, run, res, tstp, noleap, dbbaseDir, wsbaseDir= largv[1:1+8]
   if noleap=="True": noleap=True
   elif noleap=="False": noleap=False
   else: print "check noleap",noleap; sys.exit()
 
-  iYear,iMon, eYear, eMon = map(int,largv[7:])
+  iYear,iMon, eYear, eMon = map(int,largv[1+8:])
 
   eDay1 = calendar.monthrange(eYear,eMon)[1]
   iDTime = datetime(iYear,iMon,1,0)
@@ -79,18 +82,21 @@ miss   = -9999.
 dnx    = {}
 dny    = {}
 #****************************************************
-cfg    = config.cfg
-cfg['prj']   = prj    # for ConstCyclone
-cfg['model'] = model  # for ConstCyclone
-cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+#cfg    = config.cfg
+#cfg['prj']   = prj    # for ConstCyclone
+#cfg['model'] = model  # for ConstCyclone
+#
+#iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
+iom    = IO_Master.IO_Master(prj, model, run, res, dbbaseDir)
 
-iom    = IO_Master.IO_Master(cfg, prj, model, run, res)
-
-const  = ConstCyclone.Const(cfg)
+#const  = ConstCyclone.Const(cfg)
+const  = ConstCyclone.Const(prj=prj, model=model)
 const['Lat'] = iom.Lat
 const['Lon'] = iom.Lon
+#cfg['outbaseDir'] = cfg['baseDir'] + '/%s'%(run)
+wsDir = wsbaseDir + '/%s'%(run)
 
-cy     = Cyclone.Cyclone(cfg, const)
+cy     = Cyclone.Cyclone(baseDir=wsDir, const=const)
 nx     = iom.nx
 ny     = iom.ny
 
@@ -133,7 +139,8 @@ def date_slide(year,mon,day, daydelta, noleap):
 #******************************************************
 for var in lvar:
   #------
-  odir_root = os.path.join(cfg["outbaseDir"],"run.mean",var)
+  #odir_root = os.path.join(cfg["outbaseDir"],"run.mean",var)
+  odir_root = os.path.join(wsDir,"run.mean",var)
   #------------------------------
   # make heads and tails
   #------------------------------
@@ -171,18 +178,19 @@ for var in lvar:
         #except IOError:
         except:
           ain  = np.ones([ny,nx],'float32')*miss
+
         #--------------------
         # add 
         #--------------------
         a3out[i] = ain
     #*****************
     aout = ma.masked_equal(a3out, miss).mean(axis=0).astype('float32')
-    print aout.shape
     if ma.isMA(aout):
       aout = aout.filled(miss)
     #*****************
-    print oname
     aout.tofile(oname)
-  
 
 
+
+
+# %%

@@ -1,20 +1,30 @@
 import subprocess
 import os, sys
-
+import util
 
 
 prj     = "d4PDF"
 model   = "__"
-run     = "XX-HPB_NAT-100"   # {expr}-{scen}-{ens}
+expr    = 'XX'
+scen    = 'HPB'
+lens    = range(1,10+1)
+#lens    = [10]
+lrun    = ['%s-%s-%03d'%(expr,scen,ens) for ens in lens]
+#lrun     = ["XX-HPB-001"]   # {expr}-{scen}-{ens}
 res     = "320x640"
 noleap  = False
 tstp_runmean = "6hr"
+logDir = "/home/utsumi/log"
+dbbaseDir = '/home/utsumi/mnt/lab_work/hk01/d4PDF_GCM'
+wsbaseDir = '/home/utsumi/mnt/lab_tank/utsumi/WS/d4PDF_GCM'
 
-iYear, iMon = [2010,1] # Start of the detection period
-eYear, eMon = [2010,1] # End of the detection period 
+iYear, iMon = [2000,1] # Start of the detection period
+eYear, eMon = [2010,12] # End of the detection period 
+#iYear, iMon = [2010,1] # Start of the detection period
+#eYear, eMon = [2010,1] # End of the detection period 
 
-iYear_data  = 2010 # First year of the available data
-eYear_data  = 2010 # Last year of the available data
+iYear_data  = iYear # First year of the available data
+eYear_data  = eYear # Last year of the available data
 iMon_data   = 1 # First month of the available data
 
 
@@ -89,9 +99,8 @@ iMon_data   = 1 # First month of the available data
 #    iMon_data                 = largv[13]
 #    iYearMinMax, eYearMinMax  = largv[14:14+2]
 
-lrun   = [run] 
-#logDir = "~/log"
-logDir = "/home/utsumi/log"
+#lrun   = [run] 
+util.mk_dir(logDir)
 #*********************************
 def exec_func(cmd):
     cmd = " ".join(map(str, cmd))
@@ -127,52 +136,59 @@ for run in lrun:
     exec_func(cmd)
     '''
      
-    #*********************************
-    # Cyclone (ExC and TC)
-    #---------------------------------
-    cmd = ["python","c.runmean.wind.py"
-            , prj, model, run, res, tstp_runmean, noleap
-            , iYear, iMon, eYear, eMon
-        ]
-    exec_func(cmd)
-    
-    cmd = ["python","c.findcyclone.py"
-            , prj, model, run, res, noleap
-            , iYear, iMon, eYear, eMon
-        ]
-    exec_func(cmd)
-    
-    cmd = ["python","c.connectc.fwd.py"
-            , prj, model, run, res, noleap
-            , iYear, iMon, eYear, eMon
-        ]
-    exec_func(cmd)
-    
-    #flagresume = False
-    flagresume = True
-    cmd = ["python","c.connectc.bwd.py"
-            , prj, model, run, res, noleap, flagresume
-            , iYear, iMon, eYear, eMon
-        ]
-    exec_func(cmd)
-    
-    cmd = ["python","c.mk.clist.obj.py"
-            , prj, model, run, res, noleap
-            , iYear, iMon, eYear, eMon
-        ]
-    exec_func(cmd)
+    ##*********************************
+    ## Cyclone (ExC and TC)
+    ##---------------------------------
+    #cmd = ["python","c.runmean.wind.py"
+    #        , prj, model, run, res, tstp_runmean, noleap
+    #        , dbbaseDir, wsbaseDir
+    #        , iYear, iMon, eYear, eMon
+    #    ]
+    #exec_func(cmd)
+    #
+    #cmd = ["python","c.findcyclone.py"
+    #        , prj, model, run, res, noleap
+    #        , dbbaseDir, wsbaseDir
+    #        , iYear, iMon, eYear, eMon
+    #    ]
+    #exec_func(cmd)
+    #
+    #cmd = ["python","c.connectc.fwd.py"
+    #        , prj, model, run, res, noleap
+    #        , dbbaseDir, wsbaseDir
+    #        , iYear, iMon, eYear, eMon
+    #    ]
+    #exec_func(cmd)
+    #
+    ##flagresume = False
+    #flagresume = True
+    #cmd = ["python","c.connectc.bwd.py"
+    #        , prj, model, run, res, noleap, flagresume
+    #        , dbbaseDir, wsbaseDir
+    #        , iYear, iMon, eYear, eMon
+    #    ]
+    #exec_func(cmd)
+    #
+    #cmd = ["python","c.mk.clist.obj.py"
+    #        , prj, model, run, res, noleap
+    #        , dbbaseDir, wsbaseDir
+    #        , iYear, iMon, eYear, eMon
+    #    ]
+    #exec_func(cmd)
     
     #*********************************
     # Cyclone (TC)
     #---------------------------------
     cmd = ["python","tc.mk.clist.obj.py"
             , prj, model, run, res, noleap
+            , dbbaseDir, wsbaseDir
             , iYear, iMon, eYear, eMon
         ]
     exec_func(cmd)
     
     cmd = ["python","tc.mk.clist.obj.initState.py"
             , prj, model, run, res, noleap
+            , dbbaseDir, wsbaseDir
             , iYear, iMon, eYear, eMon
             , iYear_data, iMon_data
         ]
